@@ -1,0 +1,41 @@
+Run npm run build
+
+> botshop@0.1.0 build
+> npm --workspace @botshop/api run build && npm --workspace @botshop/web run build
+
+
+> build
+> nest build
+
+npm error No workspaces found:
+npm error   --workspace=@botshop/web
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-11-14T14_49_39_824Z-debug-0.log
+Error: Process completed with exit code 1.
+
+name: restore-from-zip
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack project from zip
+        run: |
+          ZIP=$(ls BotShop-stage*.zip | tail -1)
+          rm -rf /tmp/x && mkdir /tmp/x && unzip -q "$ZIP" -d /tmp/x
+          SRC=/tmp/x/botshop
+          find apps -maxdepth 1 -type f -delete
+          rm -rf apps/web apps/api
+          cp -a "$SRC"/. .
+          git checkout -- .github 2>/dev/null || true
+          git clean -fdq .github
+          git rm -q -f "$ZIP"
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A
+          git commit -m "Restore project from zip" || echo "nothing to commit"
+          git push
