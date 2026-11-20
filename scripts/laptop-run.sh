@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 ROOT="$PWD"; ENVF="$ROOT/.env.laptop"; RUN="$ROOT/.laptop-run"; mkdir -p "$RUN"
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 PGO=botshop
+as_pg() { if [ "$(id -u)" -eq 0 ]; then runuser -u postgres -- "$@"; else sudo -u postgres "$@"; fi; }
 
 setup() {
   echo "▶ نصب بسته‌ها (ممکن است رمز ویندوز/لینوکس را بخواهد)"
@@ -51,9 +52,10 @@ EOF
     chmod 600 "$ENVF"
   fi
   set -a; . "$ENVF"; set +a
+  export NODE_ENV=development   # فقط برای نصب/ساخت: با production وابستگی‌های توسعه (tsx, nest) نصب نمی‌شوند
   mkdir -p "$UPLOAD_DIR"
-  if ! $SUDO -u postgres psql -qAt -c "select 1 from pg_roles where rolname='${PGO}'" | grep -q 1; then
-    $SUDO -u postgres psql -q -c "CREATE ROLE ${PGO} LOGIN SUPERUSER PASSWORD '${PG_OWNER_PW}'" -c "CREATE DATABASE botshop OWNER ${PGO}"
+  if ! as_pg psql -qAt -c "select 1 from pg_roles where rolname='${PGO}'" | grep -q 1; then
+    as_pg psql -q -c "CREATE ROLE ${PGO} LOGIN SUPERUSER PASSWORD '${PG_OWNER_PW}'" -c "CREATE DATABASE botshop OWNER ${PGO}"
     PGPASSWORD="$PG_OWNER_PW" psql -q -h localhost -U "$PGO" -d botshop -f infra/postgres-init.sql
     PGPASSWORD="$PG_OWNER_PW" psql -q -h localhost -U "$PGO" -d botshop -c "ALTER ROLE botshop_app PASSWORD '${PG_APP_PW}'; ALTER ROLE botshop_system PASSWORD '${PG_SYS_PW}'"
   fi
