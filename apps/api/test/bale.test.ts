@@ -57,6 +57,9 @@ test('Bale واقعی: pre_checkout_query و successful_payment نرمال‌س�
 test('Bale: فقط توکن آزمایشی پرداخت را فعال می‌کند؛ توکن واقعی رد می‌شود', async () => {
   assert.equal(new BaleHttpAdapter({ token: TOKEN, baseUrl: 'https://x.invalid', providerToken: '6037997412345678' }).paymentsVerified, false);
   assert.equal(new BaleHttpAdapter({ token: TOKEN, baseUrl: 'https://x.invalid' }).paymentsVerified, false);
+  // توکن خود فروشنده پذیرفته می‌شود (وجه به حساب خودش)، ولی توکن خالی هرگز
+  assert.equal(new BaleHttpAdapter({ token: TOKEN, baseUrl: 'https://x.invalid', providerToken: '6037997412345678', sellerOwnedProviderToken: true }).paymentsVerified, true);
+  assert.equal(new BaleHttpAdapter({ token: TOKEN, baseUrl: 'https://x.invalid', providerToken: '', sellerOwnedProviderToken: true }).paymentsVerified, false);
   let body: any; const fake = (async (_u: any, init: any) => { body = JSON.parse(init.body); return new Response(JSON.stringify({ ok: true, result: { message_id: 8 } }), { status: 200 }); }) as typeof fetch;
   const a = new BaleHttpAdapter({ token: TOKEN, baseUrl: 'https://x.invalid', providerToken: 'WALLET-TEST-1111111111111111', fetchImpl: fake });
   assert.equal(a.paymentsVerified, true);

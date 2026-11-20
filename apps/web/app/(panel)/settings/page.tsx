@@ -4,6 +4,7 @@ import { api, useApi, rial, fa } from '@/lib/client';
 import { ErrorBox, Loading } from '@/components/ui';
 export default function Settings() {
   const stores = useApi<any[]>('stores'); const ch = useApi<any[]>('channels'); const sub = useApi<any>('subscription'); const plans = useApi<any[]>('plans');
+  const [payTok, setPayTok] = useState(''); const [paymsg, setPaymsg] = useState('');
   const [token, setToken] = useState(''); const [msg, setMsg] = useState(''); const [busy, setBusy] = useState(false);
   const store = stores.data?.[0];
   const [ship, setShip] = useState<{ flat: string; free: string } | null>(null); const [smsg, setSmsg] = useState(''); const [pw, setPw] = useState({ cur: '', next: '' }); const [pmsg, setPmsg] = useState('');
@@ -17,6 +18,10 @@ export default function Settings() {
     try { await api('auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: pw.cur, newPassword: pw.next }) }); setPw({ cur: '', next: '' }); setPmsg('رمز تغییر کرد ✓ (دوباره وارد شوید)'); } catch (e: any) { setPmsg(e.message); }
   }
   async function renew(planId: string) { try { await api('subscription/renew', { method: 'POST', body: JSON.stringify({ planId }) }); setPmsg('صورتحساب ساخته شد ✓ پس از پرداخت، مدیر پلتفرم آن را تأیید می‌کند.'); sub.reload(); } catch (e: any) { setPmsg(e.message); } }
+  async function savePay(e: React.FormEvent, clear = false) {
+    e.preventDefault(); setPaymsg(''); if (!clear && payTok.trim().length < 8) return setPaymsg('توکن پرداخت نامعتبر است');
+    try { await api('channels/bale/payment-token', { method: 'PUT', body: JSON.stringify({ storeId: store.id, providerToken: clear ? '' : payTok.trim() }) }); setPayTok(''); setPaymsg(clear ? 'حساب پرداخت حذف شد ✓' : 'حساب پرداخت ذخیره شد ✓'); ch.reload(); } catch (e: any) { setPaymsg(e.message); }
+  }
   async function connect(e: React.FormEvent) {
     e.preventDefault(); setMsg(''); if (token.trim().length < 10) return setMsg('توکن ربات نامعتبر است');
     setBusy(true);
@@ -30,6 +35,11 @@ export default function Settings() {
         {ch.data?.length ? ch.data.map((c) => <p key={c.id}>ربات <b dir="ltr">@{c.botUsername}</b> — <span className="badge">{c.status}</span></p>) : <p className="mute">هنوز رباتی متصل نشده است.</p>}
         <form onSubmit={connect}><label><span>توکن ربات (فقط به سرور ارسال و رمزنگاری می‌شود؛ هرگز نمایش داده نمی‌شود)</span><input style={{ width: '100%' }} dir="ltr" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           {msg && <p className={msg.includes('✓') ? '' : 'err'} role="status">{msg}</p>}<button className="btn" disabled={busy}>{busy ? 'در حال اتصال…' : 'اتصال ربات'}</button></form></>}</section>
+    {store && ch.data?.length ? <section className="card" style={{ marginTop: 16 }}><h2 style={{ marginTop: 0 }}>حساب پرداخت فروشگاه</h2>
+      <p>وضعیت: {ch.data[0].paymentsConfigured ? <span className="badge">ثبت‌شده</span> : <span className="badge">ثبت نشده</span>}</p>
+      <p className="mute">توکن پرداخت (کیف پول/درگاه) را که از بله برای <b>خودتان</b> گرفته‌اید وارد کنید. پول مشتری مستقیم به حساب خودتان می‌رود و پلتفرم آن را نگه نمی‌دارد. توکن رمزنگاری می‌شود و هرگز نمایش داده نمی‌شود.</p>
+      <form onSubmit={(e) => savePay(e)}><label><span>توکن پرداخت</span><input style={{ width: '100%' }} dir="ltr" type="password" autoComplete="off" value={payTok} onChange={(e) => setPayTok(e.target.value)} /></label>
+        {paymsg && <p className={paymsg.includes('✓') ? '' : 'err'} role="status">{paymsg}</p>}<button className="btn">ذخیره حساب پرداخت</button>{ch.data[0].paymentsConfigured && <button type="button" className="btn ghost" onClick={(e) => savePay(e as any, true)}>حذف</button>}</form></section> : null}
     {store && <section className="card" style={{ marginTop: 16 }}><h2 style={{ marginTop: 0 }}>هزینه ارسال</h2><form onSubmit={saveShip}>
       <label><span>هزینه ثابت ارسال (ریال)</span><input dir="ltr" inputMode="numeric" defaultValue={String(store.shippingFlatAmount)} onChange={(e) => setShip({ flat: e.target.value, free: ship?.free ?? store.freeShippingOver ?? '' })} /></label>
       <label><span>ارسال رایگان از مبلغ (ریال، خالی = ندارد)</span><input dir="ltr" inputMode="numeric" defaultValue={store.freeShippingOver ?? ''} onChange={(e) => setShip({ flat: ship?.flat ?? String(store.shippingFlatAmount), free: e.target.value })} /></label>

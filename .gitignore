@@ -10,3 +10,7 @@ coverage/
 backups/
 uploads/
 .env
+
+.env.laptop
+.laptop-run/
+uploads/

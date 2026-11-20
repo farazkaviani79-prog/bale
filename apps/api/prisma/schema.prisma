@@ -320,6 +320,7 @@ model ChannelConnection {
   mode BotMode @default(DEDICATED) @map("mode")
   botUsername String? @map("bot_username")
   botTokenEnc String? @map("bot_token_enc")
+  providerTokenEnc String? @map("provider_token_enc")
   webhookKey String @unique @map("webhook_key")
   webhookSecretEnc String? @map("webhook_secret_enc")
   status ConnectionStatus @default(PENDING) @map("status")

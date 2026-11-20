@@ -9,7 +9,7 @@ import { InboundEvent, InvoiceRequest, MessengerAdapter, NotVerifiedError, Outbo
  *   - قالب JSON در Update ها (message, callback_query, ...) در parseUpdate
  * پرداخت (sendInvoice / PreCheckout / SuccessfulPayment / استعلام) عمداً غیرفعال است تا زمان تأیید رسمی.
  */
-export interface BaleHttpOptions { token: string; baseUrl: string; fetchImpl?: typeof fetch; timeoutMs?: number; enablePayments?: boolean; providerToken?: string; }
+export interface BaleHttpOptions { token: string; baseUrl: string; fetchImpl?: typeof fetch; timeoutMs?: number; enablePayments?: boolean; providerToken?: string; sellerOwnedProviderToken?: boolean; }
 
 export class BaleHttpAdapter implements MessengerAdapter {
   readonly channel = 'BALE' as const;
@@ -19,7 +19,15 @@ export class BaleHttpAdapter implements MessengerAdapter {
    * ⚠️ فقط حالت آزمایشی فعال می‌شود. توکن واقعی (مقصد وجوه) تا روشن‌شدن ADR 0001 عمداً رد می‌شود
    * تا پول مشتری هرگز ناخواسته به حساب پلتفرم نرود.
    */
-  get paymentsVerified() { return typeof this.o.providerToken === 'string' && /^WALLET-TEST-/.test(this.o.providerToken); }
+  /**
+   * توکن پرداخت خود فروشنده (sellerOwnedProviderToken) پذیرفته می‌شود چون وجه مستقیم به حساب همان فروشنده می‌رود؛
+   * اگر نامعتبر باشد بله خودش sendInvoice را رد می‌کند. توکن سراسری env فقط آزمایشی `WALLET-TEST-` است.
+   */
+  get paymentsVerified() {
+    const t = this.o.providerToken;
+    if (typeof t !== 'string' || t.length === 0) return false;
+    return this.o.sellerOwnedProviderToken === true || /^WALLET-TEST-/.test(t);
+  }
   private readonly f: typeof fetch;
   constructor(private readonly o: BaleHttpOptions) { this.f = o.fetchImpl ?? fetch; }
 
